@@ -1,123 +1,29 @@
-==============================================================================================================================================================
-Analyzing Earthquake Building Damage in Nepal (District 4)
-This script extracts and analyzes building data from a SQLite database (nepal.sqlite) to understand factors related to severe building damage after an earthquake in district 4 (Gorkha, likely). It includes data wrangling, feature engineering, and exploratory data analysis.
 
-1. Wrangling Function (wrangle)
-* Connects to the database and queries structural and damage data for district 4.
+===================================================================================================================================================================
+Exploratory Data Analysis (EDA) on Building Damage
+Plotting Severe Damage Distribution:
+The bar chart visualizes the distribution of the severe_damage target variable, showing the proportion of buildings with severe and non-severe damage.
+Boxplot of Plinth Area by Damage Severity:
+A boxplot visualizes the relationship between the plinth_area_sq_ft (size of the building's foundation) and the severity of damage, providing insights into how building size relates to damage classification.
+Roof Type vs. Damage Severity:
+A pivot table groups the data by roof_type and calculates the mean severe_damage, revealing if certain roof types are more prone to severe damage during earthquakes.
 
-2.Cleans the data by:
-
-* Extracting the numeric damage grade.
-* Creating a binary severe_damage column (1 if damage_grade > 3, else 0).
-* Dropping irrelevant or duplicate columns (e.g., post-earthquake columns, building_id).
-
-Exploratory Data Analysis (EDA)
-* Correlation Matrix + Heatmap
-* Analyzes correlations between numerical features and visualizes them using a heatmap.
-* Plots the distribution of building height (height_ft_pre_eq) based on damage severity.
-* Checks the proportion of buildings that suffered severe damage using a bar plot.
-* Aggregates average severe_damage by foundation_type to identify which foundations are more vulnerable.
-* Visualizes the pivot table as a horizontal bar chart.
-* Adds red and blue vertical lines to indicate the proportion of majority and minority classes for reference.
-
-3.Object Feature Summary
-Counts the number of unique values for all object (categorical) columns — useful for identifying categorical features for modeling.
-==============================================================================================================================================================
-
-def wrangle(db_path):
-    # Connect to database
-    conn = sqlite3.connect(db_path)
-
-    # Construct query
-    query = """
-        SELECT distinct(i.building_id) AS b_id,
-           s.*,
-           d.damage_grade
-        FROM id_map AS i
-        JOIN building_structure AS s ON i.building_id = s.building_id
-        JOIN building_damage AS d ON i.building_id = d.building_id
-        WHERE district_id = 4
-    """
-
-    # Read query results into DataFrame
-    df = pd.read_sql(query, conn, index_col="b_id")
-    
-    drop_cols=[col for col in df.columns if "post_eq" in  col]
-    
-    
-    df["damage_grade"] = df["damage_grade"].str[-1].astype(int) 
-    
-    df["severe_damage"] = (df["damage_grade"] >3).astype(int)
-    
-    drop_cols.append("damage_grade")
-    
-    
-    drop_cols.append("count_floors_pre_eq")
-    
-    drop_cols.append("building_id")
-    
-    df.drop(columns=drop_cols , inplace=True)
-    
-    return df
-
-
-
-
-df = wrangle("/home/jovyan/nepal.sqlite")
-
-
-
-# Create correlation matrix
-correlation = df.select_dtypes("number").drop(columns="severe_damage").corr()
-correlation
-# Plot heatmap of `correlation`
-sns.heatmap(correlation)
-
-
-
-# Create boxplot
-sns.boxplot(x="severe_damage",y="height_ft_pre_eq",data=df)
-# Label axes
-plt.xlabel("severe_damage")
-plt.ylabel("height_ft_pre_eq")
-plt.title("Dist. builidng  height by class")
-
+===================================================================================================================================================================
 
 
 # Plot value counts of `"severe_damage"`
 df["severe_damage"].value_counts(normalize=True).plot(
     kind="bar"
-);
-
-
-majority_class_prop, minority_class_prop = df["severe_damage"].value_counts(normalize=True)
-
-
-
-# Create pivot table
-foundation_pivot = pd.pivot_table(
-    df,index="foundation_type",values="severe_damage",aggfunc=np.mean
-)
-foundation_pivot
-
-
-
-
-# Plot bar chart of `foundation_pivot`
-foundation_pivot.plot(
-    kind="barh",
 )
 
-plt.axvline(
-majority_class_prop,linestyle="--",color="r" ,label="majority_class"
+
+
+sns.boxplot(x="severe_damage",y="plinth_area_sq_ft",data=df)
+
+
+roof_pivot = pd.pivot_table(
+    df,index="roof_type",values="severe_damage"
 )
-plt.axvline(
-minority_class_prop,linestyle="--",color="b",label="minority_class"
-)
-plt.legend(loc="lower right")
 
 
-
-
-df.select_dtypes("object").nunique()
 
