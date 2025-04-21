@@ -1,1 +1,22 @@
+===================================================================================================================================================================================================================
+Feature Importance Evaluation and Visualization
+Extracting Feature Names:
+The feature names are retrieved from the OrdinalEncoder used in the pipeline (final_model_dt). This ensures that all categorical variables are properly accounted for.
+Feature Importances:
+The feature importances are extracted from the trained DecisionTreeClassifier. These values represent the relative importance of each feature in predicting the target variable (severe_damage).
+Feature Importance Sorting:
+The feature importances are converted into a pandas Series and sorted in ascending order to identify the most influential features.
+Bar Plot Visualization:
+A horizontal bar chart is plotted to visualize the importance of each feature, making it easier to identify which features have the most impact on the model's predictions.
+
+===================================================================================================================================================================================================================
+
+features = final_model_dt.named_steps["ordinalencoder"].get_feature_names()
+final_model_dt.named_steps['decisiontreeclassifier'].feature_importances_
+
+feat_imp = pd.Series(importances, index=feature_names).sort_values()
+
+feat_imp.head()
+
+feat_imp_sorted.plot(kind='barh', color='skyblue')
 
