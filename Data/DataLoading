@@ -1,106 +1,78 @@
-==============================================================================================================================================
-1. Load SQL extension and connect to the database
-2. List all objects in the database (schema info)
-3. List all table names
-4. Explores and joins building-related data for district 4 (likely Gorkha).
-5. Collects structural and damage information for each unique building in that district.
-6. Loads the result into a Pandas DataFrame for further analysis or visualization.
-==============================================================================================================================================
-
-
+# Import libraries here
 import sqlite3
+import warnings
+from category_encoders import OrdinalEncoder
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from category_encoders import OneHotEncoder
+from IPython.display import VimeoVideo
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.utils.validation import check_is_fitted
+import seaborn as sns
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+
+
+
 
 %load_ext sql
 %sql sqlite:////home/jovyan/nepal.sqlite
 
-SELECT * 
-FROM sqlite_schema
+SELECT DISTINCT district_id FROM id_map;
 
-SELECT name FROM sqlite_schema
-WHERE type="table"
 
-%%sql
-SELECT * FROM id_map
-LIMIT 5
-
-SELECT count(*) FROM id_map
-
-SELECT  distinct(district_id)
+SELECT COUNT(*) 
 FROM id_map
+WHERE district_id = 1;
 
 
-SELECT count(distinct(building_id) ) 
+
+SELECT COUNT(*) 
 FROM id_map
-
-SELECT *
-FROM id_map
-WHERE district_id=4
-LIMIT 5
-
-SELECT count(*)
-FROM id_map
-WHERE district_id=4
-
-SELECT count(distinct(building_id)) AS unique_building_Gorkha
-FROM id_map 
-WHERE district_id=4
-
-SELECT* 
-FROM building_structure
-LIMIT 5
-
-SELECT count(building_id)
-FROM building_structure
+WHERE district_id = 3;
 
 
-SELECT *
-FROM building_structure AS b
-JOIN id_map AS i
-ON b.building_id = i.building_id
-WHERE i.district_id = 4
-LIMIT 5
+# Build your `wrangle` function here
+def wrangle(db_path):
+    # Connect to database
+    conn = sqlite3.connect(db_path)
 
+    # Construct query
+    query = """SELECT DISTINCT I.building_id AS b_id, 
+                B.*, 
+                D.damage_grade
+                FROM id_map AS I
+                JOIN building_structure AS B ON B.building_id = I.building_id
+                JOIN building_damage AS D ON D.building_id = I.building_id
+                WHERE I.district_id = 3   """
+            
+    df= pd.read_sql(query, conn, index_col="b_id")
+    
+        # Identify leaky columns
+    drop_cols = [col for col in df.columns if "post_eq" in col]
 
+    # Add high-cardinality / redundant column
+    drop_cols.append("building_id")
+    
+    drop_cols.append("damage_grade")
 
-SELECT distinct(i.building_id ),
-        s.*
-FROM id_map i
-JOIN building_structure s
-ON i.building_id = s.building_id
-WHERE i.district_id = 4
+    # Drop multicollinearity column
+    drop_cols.append("count_floors_pre_eq")
 
+    df["damage_grade"] = df["damage_grade"].str[-1].astype(int)
+    df["severe_damage"] = (df["damage_grade"] > 3).astype(int)
+    
+    
+    df.drop(columns=drop_cols, inplace=True)
 
-SELECT distinct(i.building_id ) AS b_id,
-        s.*,
-        d.damage_grade
-FROM id_map i
-JOIN building_structure s
-ON i.building_id = s.building_id 
-JOIN building_damage AS d on i.building_id = d.building_id
-WHERE i.district_id = 4
-Limit 5
+    
+    return df
 
 
 
-
-query = """
-
-SELECT distinct(im.building_id ) AS bs_id,
-        bs.*,
-        bd.damage_grade
-FROM building_structure bs
-JOIN id_map im
-ON bs.building_id = im.building_id 
-JOIN building_damage AS bd on im.building_id = bd.building_id
-WHERE im.district_id = 4
-
-
-"""
-
-
-conn = sqlite3.connect(db_path)
-df = pd.read_sql(query,conn,index_col="b_id")
-
-
+df = wrangle("/home/jovyan/nepal.sqlite")
 
