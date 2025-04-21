@@ -1,0 +1,20 @@
+==============================================================================================================================================
+1. Load SQL extension and connect to the database
+2. List all objects in the database (schema info)
+3. List all table names
+==============================================================================================================================================
+
+
+import sqlite3
+import pandas as pd
+
+%load_ext sql
+%sql sqlite:////home/jovyan/nepal.sqlite
+
+
+SELECT * 
+FROM sqlite_schema
+
+
+SELECT name FROM sqlite_schema
+WHERE type="table"
