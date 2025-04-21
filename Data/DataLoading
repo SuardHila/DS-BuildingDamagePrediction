@@ -2,6 +2,9 @@
 1. Load SQL extension and connect to the database
 2. List all objects in the database (schema info)
 3. List all table names
+4. Explores and joins building-related data for district 4 (likely Gorkha).
+5. Collects structural and damage information for each unique building in that district.
+6. Loads the result into a Pandas DataFrame for further analysis or visualization.
 ==============================================================================================================================================
 
 
@@ -11,10 +14,93 @@ import pandas as pd
 %load_ext sql
 %sql sqlite:////home/jovyan/nepal.sqlite
 
-
 SELECT * 
 FROM sqlite_schema
 
-
 SELECT name FROM sqlite_schema
 WHERE type="table"
+
+%%sql
+SELECT * FROM id_map
+LIMIT 5
+
+SELECT count(*) FROM id_map
+
+SELECT  distinct(district_id)
+FROM id_map
+
+
+SELECT count(distinct(building_id) ) 
+FROM id_map
+
+SELECT *
+FROM id_map
+WHERE district_id=4
+LIMIT 5
+
+SELECT count(*)
+FROM id_map
+WHERE district_id=4
+
+SELECT count(distinct(building_id)) AS unique_building_Gorkha
+FROM id_map 
+WHERE district_id=4
+
+SELECT* 
+FROM building_structure
+LIMIT 5
+
+SELECT count(building_id)
+FROM building_structure
+
+
+SELECT *
+FROM building_structure AS b
+JOIN id_map AS i
+ON b.building_id = i.building_id
+WHERE i.district_id = 4
+LIMIT 5
+
+
+
+SELECT distinct(i.building_id ),
+        s.*
+FROM id_map i
+JOIN building_structure s
+ON i.building_id = s.building_id
+WHERE i.district_id = 4
+
+
+SELECT distinct(i.building_id ) AS b_id,
+        s.*,
+        d.damage_grade
+FROM id_map i
+JOIN building_structure s
+ON i.building_id = s.building_id 
+JOIN building_damage AS d on i.building_id = d.building_id
+WHERE i.district_id = 4
+Limit 5
+
+
+
+
+query = """
+
+SELECT distinct(im.building_id ) AS bs_id,
+        bs.*,
+        bd.damage_grade
+FROM building_structure bs
+JOIN id_map im
+ON bs.building_id = im.building_id 
+JOIN building_damage AS bd on im.building_id = bd.building_id
+WHERE im.district_id = 4
+
+
+"""
+
+
+conn = sqlite3.connect(db_path)
+df = pd.read_sql(query,conn,index_col="b_id")
+
+
+
